@@ -1,11 +1,6 @@
-export interface IAgent {
-    company: string;
-    cnpj: string;
-    url: string;
-    login: string;
-    password: string;
-}
+import { IAgent } from "../configs/IAgent";
+
 
 export interface IScraperWeb {
-    scraper(agent: IAgent, ref: number): Promise<void>;
+    start(agent: IAgent, ref: number): Promise<void>;
 }
