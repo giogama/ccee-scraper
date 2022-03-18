@@ -9,8 +9,8 @@ export class ScraperRRVController {
     async handle(request: Request, response: Response): Promise<Response>
     {
         try {
-            const robotId = Number(request.params.robotId);
-            const cnpj = request.params.cnpj;
+            const robotId = Number(request.params.roboid);
+            const cnpj = request.params.cnpj;            
 
             await this.scraperService.execute(robotId, cnpj);
 

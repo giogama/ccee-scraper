@@ -1,4 +1,4 @@
-import { IAgent } from "../configs/IAgent";
+import { IAgent } from "../configs/IScraperConfig";
 
 
 export interface IScraperWeb {
