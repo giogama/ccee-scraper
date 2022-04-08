@@ -1,6 +1,6 @@
-import { IAgent } from "../configs/IScraperConfig";
+import { IAgent, IEmailSettings } from "../configs/IScraperConfig";
 
 
 export interface IScraperWeb {
-    start(agent: IAgent, ref: number): Promise<void>;
+    start(agent: IAgent, mailSettings: IEmailSettings, ref: number): Promise<void>;
 }

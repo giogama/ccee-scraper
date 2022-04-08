@@ -1,15 +1,6 @@
-interface IAddress {
-    name: string;
-    email: string;
+import { IEmailSettings } from '../configs/IScraperConfig';
+
+export interface IMailProvider {    
+    getTokenInEmail(settings:IEmailSettings): Promise<string[]>;    
 }
 
-export interface IMessage {
-    from: IAddress;
-    to: IAddress;
-    subject: string;
-    body: string;
-}
-
-export interface IMailProvider {
-    sendMail(message: IMessage): Promise<void>;
-}

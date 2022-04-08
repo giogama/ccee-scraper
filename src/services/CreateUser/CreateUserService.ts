@@ -20,19 +20,19 @@ export class CreateUserService {
         const user = new User(data);
         await this.repUser.save(user);
 
-        await this.mailProvider.sendMail(
-            {
-                from: {
-                     name: 'Sistema XYZ',
-                     email: 'naoresponsa@app.com.br',
-                },
-                to: {
-                    name:  data.name,
-                    email: data.email,
-                },
-                subject: 'Seja bem vindo ao App',
-                body: 'Agora você faz parte a plataforma.',
-            }
-        );
+        // await this.mailProvider.sendMail(
+        //     {
+        //         from: {
+        //              name: 'Sistema XYZ',
+        //              email: 'naoresponsa@app.com.br',
+        //         },
+        //         to: {
+        //             name:  data.name,
+        //             email: data.email,
+        //         },
+        //         subject: 'Seja bem vindo ao App',
+        //         body: 'Agora você faz parte a plataforma.',
+        //     }
+        // );
     }
 }

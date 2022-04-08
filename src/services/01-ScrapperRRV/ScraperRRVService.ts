@@ -19,7 +19,7 @@ export class ScraperRRVService {
                 throw new Error(`Robot: ${robotId} and CNPJ: ${cnpj} not found.`);
             }
     
-            await this.scrape.start(agent[0], 202202);
+            await this.scrape.start(agent[0], config.ServiceConfigurations.EmailSettings, 202202);
 
         } catch (err){
             throw err;
