@@ -228,12 +228,12 @@ export class RRV01Scraper implements IScraperWeb {
 
             console.log(mensagemRetorno);
             await frame.waitForTimeout(40000); // wait for 40 seconds
-            //await browser.close();
+            await browser.close();
             console.log("Finalizado");
         }
         catch(err) {            
-            // if (browserOpen)
-            //     browser.close();
+             if (browserOpen)
+                 browser.close();
 
             console.log("Finalizado com erro: ", err);
             throw err;

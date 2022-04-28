@@ -122,61 +122,42 @@ export async function getQuadroData(page: puppeteer.Page, frame:puppeteer.Frame,
             let quadroExiste: boolean = false;
 
 			for (let element of quadros) {
-				const innerText:string = await getAttributeFromElement(element, "innerText");
-				console.log(`innerText Quadro ${quadroNumero}: `, innerText);
+				const innerText:string = await getAttributeFromElement(element, "innerText");			
                 
-                if (innerText.toString().toLowerCase().indexOf("quadro " + quadroNumero) >=0){
-					console.log("encontrou o quadro " + quadroNumero);
+                if (innerText.toString().toLowerCase().indexOf("quadro " + quadroNumero) >=0){				
 
-                    if (indiceExportar < linkExportar.length) {
-						console.log(`clicar quadro: ${quadroNumero}: `, innerText);
+                    if (indiceExportar < linkExportar.length) {						
                         await linkExportar[indiceExportar].click();
                         quadroExiste=true;
                         break;
                     }
                 }
                 indiceExportar++;
-			} 
-            
-            // quadros.forEach( async (element) => {
-            //     const innerText:string = await getAttributeFromElement(element, "innerText");
-			// 	console.log(`innerText Quadro ${quadroNumero}: `, innerText);
-                
-            //     if (innerText.toString().toLowerCase().indexOf("quadro " + quadroNumero) >=0){
-			// 		console.log("encontrou o quadro " + quadroNumero);
-
-            //         if (indiceExportar < linkExportar.length) {
-			// 			console.log(`clicar quadro: ${quadroNumero}: `, innerText);
-            //             await linkExportar[indiceExportar].click();
-            //             quadroExiste=true;
-            //             return false;
-            //         }
-            //     }
-            //     indiceExportar++;
-            // });
-			console.log("saiu do forEach");
+			}                        
 
             if (quadroExiste)
-            {
-				console.log(`Quadro ${quadroNumero} foi encontrado`);
+            {				
                 await frame.waitForTimeout(1000);
 				const elementExists: boolean = await isElementExists(frame, "//a[@id='popupMenuItem' and starts-with(@aria-label,'Excel 2007')]");
 
 				if (elementExists) {
-					const quadroUrl:string = await getAttributeFromPage(frame, "//a[@id='popupMenuItem' and starts-with(@aria-label,'Excel 2007')]", "onclick");
-
-					console.log("Iniciar extrair a Url do evento onclick");
+					const quadroUrl:string = await getAttributeFromPage(frame, "a[id=popupMenuItem][aria-label^='Excel 2007']", "onclick");
+					
 					let url: string = extractUrlFromLink(quadroUrl, agent.ParamValor2);
-					url = url.replace("amp;","");
-					console.log("url: ", url);
+					url = url.toString().replace("amp;","");					
 
 					const jCookies:puppeteer.Protocol.Network.GetAllCookiesResponse = await page.client().send("Network.getAllCookies");
-					console.log("Cookies ", jCookies);
 
-					const blobFile = await downloadFile(url, jCookies);
-					const buffer = Buffer.from( await blobFile.arrayBuffer() );
-
-                    fs.writeFile('arquivo.xlsx', buffer, () => console.log('arquivo salvo!') );					
+					if (url !== ""){
+						console.log("Iniciar o Download");
+						
+						const fileBase64: string  = await downloadFile(url, jCookies);
+						console.log(fileBase64);
+						console.log("Concluído o Download");
+						// const buffer = Buffer.from( await blobFile.arrayBuffer() );
+	
+						// fs.writeFile('arquivo.xlsx', buffer, () => console.log('arquivo salvo!') );					
+					}
 				}				
             }
         }

@@ -1,12 +1,9 @@
 import axios from 'axios';
 import puppeteer from 'puppeteer';
+import fs from 'fs';
 
 
-export async function downloadFile(url:string, cookies:puppeteer.Protocol.Network.GetAllCookiesResponse):Promise<Blob> {  
-    //const url = 'https://unsplash.com/photos/AaEQmoufHLk/download?force=true'
-    //const path = Path.resolve(__dirname, 'images', 'code.jpg')
-    //const writer = Fs.createWriteStream(path)
-
+export async function downloadFile(url:string, cookies:puppeteer.Protocol.Network.GetAllCookiesResponse):Promise<string> {  
     const arrayCookies:puppeteer.Protocol.Network.Cookie[] = cookies["cookies"];
     let cookieLine: string = "";
 
@@ -17,34 +14,28 @@ export async function downloadFile(url:string, cookies:puppeteer.Protocol.Networ
 
             cookieLine += cookieName + "=" + cookieValue + "; ";  
         });
-    }
+    }   
 
-    console.log("cookieLine: ", cookieLine);
-  
-    const response = await axios({
-      url,
-      method: 'GET',
-      responseType: 'arraybuffer',
-      withCredentials: true,
-      headers: {
-          'Access-Control-Allow-Origin': '*', 
-          'Content-Type': 'application/json',
-          'Cookie': cookieLine,
-        }
-    });
+    return axios.request({
+        responseType: 'arraybuffer',
+        url,
+        method: 'get',
+        headers: {
+           'Access-Control-Allow-Origin': '*', 
+           'Content-Type': 'application/json',
+           'Cookie': cookieLine,
+         },
+      }).then((response) => {
+        const outputFilename = 'quadro1.xlsx';
+        fs.writeFileSync(outputFilename, response.data);
+        console.log("==================================");
+        //console.log(response.headers['Content-Disposition']);
+        //console.log(response.headers);
+        const filename:string = response.headers['content-disposition'].split("filename=")[1];
+        console.log(filename);
 
-    //responseType: 'blob'
-  
-    //response.data.pipe(writer)
-  
-    return new Promise((resolve, reject) => {
-        response.data.on("end", () => {
-            resolve(new Blob[response.data]);
-        });
-
-        response.data.on("error", (err:Error) => {
-            reject(err);
-        });      
-    })
+        const fileBase64:string = Buffer.from(response.data, 'binary').toString('base64');
+        return fileBase64;
+      });
   }
 

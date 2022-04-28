@@ -114,15 +114,13 @@ export async function getAttributeFromElement(elementIn:puppeteer.ElementHandle<
 	}	
 }
 
-export async function getAttributeFromPage(frame:puppeteer.Frame, xPath:string, attrName:string):Promise<string> {
+export async function getAttributeFromPage(frame:puppeteer.Frame, selector:string, attrName:string):Promise<string> {
     let attrValue: string =  "";
 
 	try {
-        const element: puppeteer.ElementHandle<Element>[] = await frame.$x(xPath);
 
-        if (element.length > 0) {
-            attrValue = await (await element[0].getProperty(attrName)).jsonValue();    
-        }
+        //attrValue = await frame.evaluate(`document.querySelector("a[id=popupMenuItem][aria-label^='Excel 2007']").getAttribute('onclick')`);        
+        attrValue = await frame.evaluate(`document.querySelector("${selector}").getAttribute('${attrName}')`);        
         
         return attrValue;
 	} catch (err) {
@@ -186,9 +184,9 @@ export async function isElementsExists(frame:puppeteer.Frame, xPath1:string, xPa
 export function extractUrlFromLink(text:string, urlBase:string):string {
     let url:string = "";
 
-	try {
+	try {        
         if (text) {
-            const campos = text.split('\'');            
+            const campos = text.toString().split("'");            
             if (campos.length > 1)
             url = urlBase + campos[1];
         }
