@@ -114,13 +114,13 @@ export async function getAttributeFromElement(elementIn:puppeteer.ElementHandle<
 	}	
 }
 
-export async function getAttributeFromPage(frame:puppeteer.Frame, selector:string, attrName:string):Promise<string> {
+export async function getAttributeFromPage(frame:puppeteer.Frame, selector:string, attrName:string, indexElement:number):Promise<string> {
     let attrValue: string =  "";
 
 	try {
 
         //attrValue = await frame.evaluate(`document.querySelector("a[id=popupMenuItem][aria-label^='Excel 2007']").getAttribute('onclick')`);        
-        attrValue = await frame.evaluate(`document.querySelector("${selector}").getAttribute('${attrName}')`);        
+        attrValue = await frame.evaluate(`document.querySelectorAll("${selector}")[${indexElement}].getAttribute('${attrName}')`);        
         
         return attrValue;
 	} catch (err) {
@@ -189,6 +189,7 @@ export function extractUrlFromLink(text:string, urlBase:string):string {
             const campos = text.toString().split("'");            
             if (campos.length > 1)
             url = urlBase + campos[1];
+            url = url.toString().replace("amp;","");					
         }
 
         return url;

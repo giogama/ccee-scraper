@@ -105,28 +105,35 @@ export async function navigateToDashboard(agent:IAgent,  page: puppeteer.Page): 
 	}
 }
 
-export interface IQuadro {
-    ContentFile: Blob;
+export interface IDownload {
+    ContentFile: string;
     Description: string;
     Filename: string;
+	Extension: string;
 }
 
-export async function getQuadroData(page: puppeteer.Page, frame:puppeteer.Frame, agent:IAgent, xPathLinkExportar:string, quadroNumero:string):Promise<IQuadro | null> {
+export async function getQuadroData(page: puppeteer.Page, frame:puppeteer.Frame, agent:IAgent, xPathLinkExportar:string, quadroNumero:string):Promise<IDownload | null> {
 	try {
         const linkExportar: puppeteer.ElementHandle<Element>[] = await frame.$x(xPathLinkExportar);
 
         //Consultar todos os Quadros disponíveis
         const quadros: puppeteer.ElementHandle<Element>[] = await frame.$x("//td[@id='Title' and starts-with(@title,'Quadro')]");
-        if (quadros.length > 0){
+        if (quadros.length > 0) {
             let indiceExportar:number = 0;
             let quadroExiste: boolean = false;
+			let descriptionQuadro: string = "";
 
 			for (let element of quadros) {
 				const innerText:string = await getAttributeFromElement(element, "innerText");			
                 
                 if (innerText.toString().toLowerCase().indexOf("quadro " + quadroNumero) >=0){				
+					descriptionQuadro = innerText;					
 
-                    if (indiceExportar < linkExportar.length) {						
+                    if (indiceExportar < linkExportar.length) {	
+						await frame.waitForTimeout(1000);
+                        await frame.click("body");
+
+						await frame.waitForTimeout(1000);
                         await linkExportar[indiceExportar].click();
                         quadroExiste=true;
                         break;
@@ -141,26 +148,21 @@ export async function getQuadroData(page: puppeteer.Page, frame:puppeteer.Frame,
 				const elementExists: boolean = await isElementExists(frame, "//a[@id='popupMenuItem' and starts-with(@aria-label,'Excel 2007')]");
 
 				if (elementExists) {
-					const quadroUrl:string = await getAttributeFromPage(frame, "a[id=popupMenuItem][aria-label^='Excel 2007']", "onclick");
+					const quadroUrl:string = await getAttributeFromPage(frame, "a[id=popupMenuItem][aria-label^='Excel 2007']", "onclick", indiceExportar);
 					
 					let url: string = extractUrlFromLink(quadroUrl, agent.ParamValor2);
-					url = url.toString().replace("amp;","");					
 
 					const jCookies:puppeteer.Protocol.Network.GetAllCookiesResponse = await page.client().send("Network.getAllCookies");
 
-					if (url !== ""){
-						console.log("Iniciar o Download");
-						
-						const fileBase64: string  = await downloadFile(url, jCookies);
-						console.log(fileBase64);
-						console.log("Concluído o Download");
-						// const buffer = Buffer.from( await blobFile.arrayBuffer() );
-	
-						// fs.writeFile('arquivo.xlsx', buffer, () => console.log('arquivo salvo!') );					
+					if (url !== ""){									
+						const downloadQuadro: IDownload  = await downloadFile(descriptionQuadro,url, jCookies);
+						if (downloadQuadro) {
+							console.log("Filename: ", downloadQuadro.Filename);
+						}
 					}
 				}				
             }
-        }
+        }		
 
         return null;
 	} catch (err) {

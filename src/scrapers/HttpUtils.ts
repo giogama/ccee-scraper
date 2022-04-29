@@ -2,8 +2,14 @@ import axios from 'axios';
 import puppeteer from 'puppeteer';
 import fs from 'fs';
 
+export interface IDownload {
+    ContentFile: string;
+    Description: string;
+    Filename: string;
+    Extension: string;
+}
 
-export async function downloadFile(url:string, cookies:puppeteer.Protocol.Network.GetAllCookiesResponse):Promise<string> {  
+export async function downloadFile(description:string, url:string, cookies:puppeteer.Protocol.Network.GetAllCookiesResponse):Promise<IDownload> {  
     const arrayCookies:puppeteer.Protocol.Network.Cookie[] = cookies["cookies"];
     let cookieLine: string = "";
 
@@ -25,17 +31,14 @@ export async function downloadFile(url:string, cookies:puppeteer.Protocol.Networ
            'Content-Type': 'application/json',
            'Cookie': cookieLine,
          },
-      }).then((response) => {
-        const outputFilename = 'quadro1.xlsx';
-        fs.writeFileSync(outputFilename, response.data);
-        console.log("==================================");
-        //console.log(response.headers['Content-Disposition']);
-        //console.log(response.headers);
-        const filename:string = response.headers['content-disposition'].split("filename=")[1];
-        console.log(filename);
+      }).then((response) => {  
+            const filename:string = response.headers['content-disposition'].split("filename=")[1].toString().replaceAll(`"`, '').replaceAll(`'`, '');
+            const extension:string = filename.split('.').pop();            
+            fs.writeFileSync(filename, response.data);
 
-        const fileBase64:string = Buffer.from(response.data, 'binary').toString('base64');
-        return fileBase64;
+            const fileBase64:string = Buffer.from(response.data, 'binary').toString('base64');
+
+            return {ContentFile: fileBase64, Description: description, Filename: filename, Extension: extension};
       });
   }
 

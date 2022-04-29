@@ -207,8 +207,12 @@ export class RRV01Scraper implements IScraperWeb {
                                 {  
                                     console.log("iniciar download quador 1");                                  
                                     await getQuadroData(page, frame, agent, elementsExists.XPath, "1");
+                                    await frame.waitForTimeout(1000);
+                                    
+                                    console.log("iniciar download quador 2");                                  
+                                    await getQuadroData(page, frame, agent, elementsExists.XPath, "2");
                                     //console.log("downloaded file");
-                                    console.log("passou pelo download do quadro 1");
+                                    console.log("concluído download dos quadros");
                                 }
                                 else
                                     mensagemRetorno = `RRV001 ${agent.ParamValor5} - Nenhum quadro disponível.`;            
@@ -228,12 +232,12 @@ export class RRV01Scraper implements IScraperWeb {
 
             console.log(mensagemRetorno);
             await frame.waitForTimeout(40000); // wait for 40 seconds
-            await browser.close();
+            //await browser.close();
             console.log("Finalizado");
         }
         catch(err) {            
-             if (browserOpen)
-                 browser.close();
+            //  if (browserOpen)
+            //      browser.close();
 
             console.log("Finalizado com erro: ", err);
             throw err;
