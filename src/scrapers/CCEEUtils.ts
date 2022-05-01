@@ -105,6 +105,24 @@ export async function navigateToDashboard(agent:IAgent,  page: puppeteer.Page): 
 	}
 }
 
+export async function selectReferencia(frame:puppeteer.Frame, agent:IAgent): Promise<void>{
+	try {
+			//Localizar ID            
+            let id:string = await locateId(frame);
+            let mensagemRetorno: string = "";
+	} catch (err) {
+		throw err;
+	}
+}
+
+export async function getNumberQuadros(frame:puppeteer.Frame):Promise<number> {
+	try {
+        return await frame.evaluate(`document.querySelectorAll("td[id='Title'][title^='Quadro']").length`);        
+	} catch (err) {
+	    throw err;
+	}	
+}
+
 export interface IDownload {
     ContentFile: string;
     Description: string;

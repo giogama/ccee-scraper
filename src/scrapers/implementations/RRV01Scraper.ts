@@ -1,5 +1,5 @@
 import { IAgent, IEmailSettings } from '../../configs/IScraperConfig';
-import { loginCCEE, startBrowser, processToken, navigateToDashboard, getQuadroData } from '../CCEEUtils';
+import { loginCCEE, startBrowser, processToken, navigateToDashboard, getNumberQuadros, getQuadroData } from '../CCEEUtils';
 import { locateId, locatePrefixoImageAnoMes, locatePrefixoImageEvento, 
          clickAgenteListbox, locatePrefixoImagePerfil, 
          clickPerfilCheckbox, getAttributeFromElement, 
@@ -204,14 +204,14 @@ export class RRV01Scraper implements IScraperWeb {
                                 //BLOCO INICIO
                                 const elementsExists: IElementExists = await isElementsExists(frame, "//a[@name='ReportLinkMenu' and @title='Exportar para formato diferente']", "//a[@name='ReportLinkMenu' and @title='Export to different format']" );
                                 if (elementsExists.Exists)
-                                {  
-                                    console.log("iniciar download quador 1");                                  
-                                    await getQuadroData(page, frame, agent, elementsExists.XPath, "1");
-                                    await frame.waitForTimeout(1000);
-                                    
-                                    console.log("iniciar download quador 2");                                  
-                                    await getQuadroData(page, frame, agent, elementsExists.XPath, "2");
-                                    //console.log("downloaded file");
+                                { 
+                                    const quadros:number = await getNumberQuadros(frame); 
+
+                                    for (let i=1; i<=quadros; i++){
+                                        console.log("iniciar download quador ", i);                                  
+                                        await getQuadroData(page, frame, agent, elementsExists.XPath, i.toString());
+                                        await frame.waitForTimeout(1000);
+                                    }                                    
                                     console.log("concluído download dos quadros");
                                 }
                                 else
