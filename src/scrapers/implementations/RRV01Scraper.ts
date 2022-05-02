@@ -1,8 +1,8 @@
 import { IAgent, IEmailSettings } from '../../configs/IScraperConfig';
-import { loginCCEE, startBrowser, processToken, navigateToDashboard, getNumberQuadros, getQuadroData } from '../CCEEUtils';
-import { locateId, locatePrefixoImageAnoMes, locatePrefixoImageEvento, 
-         clickAgenteListbox, locatePrefixoImagePerfil, 
-         clickPerfilCheckbox, getAttributeFromElement, 
+import { loginCCEE, startBrowser, processToken, navigateToDashboard, locateId, 
+         locatePrefixoImageAnoMes, locatePrefixoImageEvento, 
+         clickAgenteListbox, locatePrefixoImagePerfil, clickPerfilCheckbox, getNumberQuadros, getQuadroData, selectReferencia, selectEvento, selectPerfil } from '../CCEEUtils';
+import { getAttributeFromElement, 
          isElementExists, IElementExists, isElementsExists } from '../HTMLUtils';
 import { IScraperWeb } from "../IScraperWeb";
 import { IMailProvider } from '../../providers/IMailProvider';
@@ -70,174 +70,55 @@ export class RRV01Scraper implements IScraperWeb {
             await mnuAba[0].click();
             await frame.waitForTimeout(5000);
             
-            //Localizar ID            
-            let id:string = await locateId(frame);
             let mensagemRetorno: string = "";
-
-            if (id !== "")
+            
+            //---------------------------------
+            mensagemRetorno = await selectReferencia(frame, agent, ref);
+            if (mensagemRetorno !== "")
             {
-                //Id Imagem AnoMes
-                await frame.waitForTimeout(1000);
-                let idImg:string = await locatePrefixoImageAnoMes(frame, id);                
-
-                //Imagem dropdown ano_mes                
-                await frame.click(`#${idImg}_dropdownIcon`);
-                await frame.waitForTimeout(7000);
-
-                //Selecionar o ano/mes da lista
-                let anomes: string = ref.toString().substring(0, 4) + "/" + ref.toString().substring(4, 6);                
-                let elementExists: boolean = await isElementExists(frame, `//div//span[@class='promptMenuOptionText' and text()='${anomes}']`);                
-
-                if (elementExists)
+                mensagemRetorno = await selectEvento(frame, agent, ref);
+                if (mensagemRetorno !== "")
                 {
-                    const selectAnoMes:puppeteer.ElementHandle<Element>[] = await frame.$x(`//div//span[@class='promptMenuOptionText' and text()='${anomes}']`);            
-                    if (!selectAnoMes || selectAnoMes.length == 0)
-                        throw new Error('Falha ao acessar Combo AnoMes');                    
-                    
-                    await selectAnoMes[0].click();
+                    // Selecionar Agente
+                    await clickAgenteListbox(frame, agent);
+                    await frame.waitForTimeout(1000);
 
-                    //COLOCAR VERIFICADOR SE A PAGINA FOI CARREGADA (DEMORA PRA ABRIR)
-                    await frame.waitForTimeout(7000);
-
-                    //Localizar novo ID para selecionar o evento
-                    id = await locateId(frame);
-                    if (id !== "")
+                    mensagemRetorno = await selectPerfil(page, frame, agent);
+                    if (mensagemRetorno !== "")
                     {
-                        //Buscar id input do evento que será o prefixo do id da imagem
-                        await frame.waitForTimeout(1000);
-                        idImg = await locatePrefixoImageEvento(frame, id);
+                        //Botão Aplicar
+                        console.log("botão aplicar");
+                        await frame.click("#gobtn");
+                        await frame.waitForTimeout(30000);
 
-                        //Imagem dropdown evento
-                        await frame.click(`#${idImg}_dropdownIcon`);
-                        await frame.waitForTimeout(6000);
+                        //BLOCO INICIO
+                        const elementsExists: IElementExists = await isElementsExists(frame, "//a[@name='ReportLinkMenu' and @title='Exportar para formato diferente']", "//a[@name='ReportLinkMenu' and @title='Export to different format']" );
+                        if (elementsExists.Exists)
+                        { 
+                            const quadros:number = await getNumberQuadros(frame); 
 
-                        //Selecionar Evento
-                        anomes = ref.toString().substring(0, 4) + "_" + ref.toString().substring(4, 6);                
-                        elementExists = await isElementExists(frame, `//span[@class='promptMenuOptionText' and text()='${anomes}_${agent.ParamValor4}']`);                
-                        if (elementExists)
-                        {
-                            const selectEvento:puppeteer.ElementHandle<Element>[] = await frame.$x(`//span[@class='promptMenuOptionText' and text()='${anomes}_${agent.ParamValor4}']`);            
-                            if (!selectEvento || selectEvento.length == 0)
-                                throw new Error('Falha ao acessar Combo Evento');                    
-                            
-                            await selectEvento[0].click();
-                            await frame.waitForTimeout(4000);
-
-                            // Selecionar Agente
-                            await clickAgenteListbox(frame, agent);
-                            await frame.waitForTimeout(1000);
-
-                            //Localizar novo ID para selecionar o Perfil
-                            id = await locateId(frame);
-                            if (id !== "")
-                            {
-                                let repeater = 0;
-                                do {
-                                    //Localizar novamente o ID para selecionar o Perfil
-                                    id = await locateId(frame);
-                                    await frame.waitForTimeout(1000);
-
-                                    //Id Imagem Perfil
-                                    idImg = await locatePrefixoImagePerfil(frame, id);
-
-                                    //Imagem dropdown Perfil
-                                    await frame.click(`#${idImg}_dropdownIcon`);
-                                    await frame.waitForTimeout(6000);
-
-                                    //Selecionar Perfil
-                                    elementExists = await isElementExists(frame, `//div//label[@class='checkboxRadioButtonLabel' and text()='${agent.ParamNome1}']`);                                                    
-                                    if (elementExists)
-                                    {
-                                        let chkPerfil:puppeteer.ElementHandle<Element> = await frame.$(`input[name='${idImg}'][value='${agent.ParamNome1}'][type='checkbox']`);
-                                        if (chkPerfil === null){
-                                            await frame.waitForTimeout(1000);
-                                            id = await locateId(frame);
-                                            await frame.waitForTimeout(1000);
-                                            idImg = await locatePrefixoImagePerfil(frame, id);
-                                            chkPerfil = await frame.$(`input[name='${idImg}'][value='${agent.ParamNome1}'][type='checkbox']`);
-                                        }                                        
-
-                                        if (chkPerfil === null){
-                                            await page.close();
-                                            throw new Error("RRV001 - Falha obter referência ao elemento Perfil.");
-                                        }
-                                        
-                                        const checkedValue:string = await getAttributeFromElement(chkPerfil, "checked");                                        
-
-                                        if (checkedValue !== null){
-                                            if (checkedValue.toString().toLowerCase() !== "true")
-                                            {
-                                                await frame.waitForTimeout(2000);
-                                                await clickPerfilCheckbox(frame, agent);
-                                                await frame.waitForTimeout(2000);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            await frame.waitForTimeout(2000);
-                                            await clickPerfilCheckbox(frame, agent);
-                                            await frame.waitForTimeout(2000);
-                                        }
-
-                                        //Desmcarcar Combo Pertil
-                                        await frame.click(`#${idImg}_dropdownIcon`);
-                                        await frame.waitForTimeout(6000);
-                                        repeater = 0;
-                                        break;
-                                    }
-                                    else
-                                        repeater++;
-
-                                } while(repeater <= 2);
-
-                                if (repeater != 0)
-                                {
-                                    await page.close();
-                                    throw new Error("RRV001 - Falha ao acessar o Dropdown list Perfil.");
-                                }
-
-                                //Botão Aplicar
-                                console.log("botão aplicar");
-                                await frame.click("#gobtn");
-                                await frame.waitForTimeout(30000);
-
-                                //BLOCO INICIO
-                                const elementsExists: IElementExists = await isElementsExists(frame, "//a[@name='ReportLinkMenu' and @title='Exportar para formato diferente']", "//a[@name='ReportLinkMenu' and @title='Export to different format']" );
-                                if (elementsExists.Exists)
-                                { 
-                                    const quadros:number = await getNumberQuadros(frame); 
-
-                                    for (let i=1; i<=quadros; i++){
-                                        console.log("iniciar download quador ", i);                                  
-                                        await getQuadroData(page, frame, agent, elementsExists.XPath, i.toString());
-                                        await frame.waitForTimeout(1000);
-                                    }                                    
-                                    console.log("concluído download dos quadros");
-                                }
-                                else
-                                    mensagemRetorno = `RRV001 ${agent.ParamValor5} - Nenhum quadro disponível.`;            
-                            }
-                            else
-                                mensagemRetorno = `RRV001 ${agent.ParamValor5} - Evento: ${anomes} - perfil não pode ser localizado.`;        
+                            for (let i=1; i<=quadros; i++){
+                                console.log("iniciar download quador ", i);                                  
+                                await getQuadroData(page, frame, agent, elementsExists.XPath, i.toString());
+                                await frame.waitForTimeout(1000);
+                            }                                    
+                            console.log("concluído download dos quadros");
                         }
                         else
-                            mensagemRetorno = `RRV001 ${agent.ParamValor5} - Evento: ${anomes} - ${agent.ParamValor4} não disponível`;    
+                            mensagemRetorno = `RRV001 ${agent.ParamValor5} - Nenhum quadro disponível.`; 
                     }
-                    else
-                        mensagemRetorno = `RRV001 ${agent.ParamValor5} - não foi possível obter o id html do evento. Falha de Scraping`;
                 }
-                else
-                    mensagemRetorno = `RRV001 ${agent.ParamValor5} - Referência: ${anomes} não disponível`;
             }
-
+            //---------------------------------
+            
             console.log(mensagemRetorno);
             await frame.waitForTimeout(40000); // wait for 40 seconds
-            //await browser.close();
+            await browser.close();
             console.log("Finalizado");
         }
         catch(err) {            
-            //  if (browserOpen)
-            //      browser.close();
+             if (browserOpen)
+                 browser.close();
 
             console.log("Finalizado com erro: ", err);
             throw err;

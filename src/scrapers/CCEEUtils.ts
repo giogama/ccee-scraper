@@ -5,6 +5,7 @@ import { getAttributeFromElement, getAttributeFromPage, isElementExists, extract
 import fs from 'fs';
 import { downloadFile } from './HttpUtils';
 
+
 export async function startBrowser(){
 	let browser: puppeteer.Browser;
 
@@ -103,13 +104,300 @@ export async function navigateToDashboard(agent:IAgent,  page: puppeteer.Page): 
 	} catch (err) {
 		throw err;
 	}
+}export async function locateId(frame:puppeteer.Frame):Promise<string> {
+    let id: string =  "";
+
+	try {
+        const elementId: puppeteer.ElementHandle<Element>[] = await frame.$x("//div[starts-with(@id,'newLayout_saw_')]");
+
+        if (elementId.length > 0){
+            id = await elementId[0].evaluate(el => el.getAttribute("id"));
+            //Exemplo: newLayout_saw_1239175_1
+            const campos = id.split('_');            
+            if (campos.length > 2)
+                id = campos[2];
+        }
+        
+        return id;
+	} catch (err) {
+	    throw err;
+	}	
 }
 
-export async function selectReferencia(frame:puppeteer.Frame, agent:IAgent): Promise<void>{
+export async function locatePrefixoImageAnoMes(frame:puppeteer.Frame, id:string):Promise<string> {
+    let idImg: string =  "";
+
 	try {
-			//Localizar ID            
-            let id:string = await locateId(frame);
-            let mensagemRetorno: string = "";
+        const elementId: puppeteer.ElementHandle<Element>[] = await frame.$x(`//input[starts-with(@id,'saw_${id}')]`);
+
+        if (elementId.length > 0){
+            idImg = await elementId[0].evaluate(el => el.getAttribute("id"));            
+        }
+        
+        return idImg;
+	} catch (err) {
+	    throw err;
+	}	
+}
+
+export async function locatePrefixoImageEvento(frame:puppeteer.Frame, id:string):Promise<string> {
+    let idImg: string =  "";
+
+	try {
+        const elementId: puppeteer.ElementHandle<Element>[] = await frame.$x(`//input[starts-with(@id,'saw_${id}')]`);
+
+        if (elementId.length > 1){
+            idImg = await elementId[1].evaluate(el => el.getAttribute("id"));            
+        }
+        
+        return idImg;
+	} catch (err) {
+	    throw err;
+	}	
+}
+
+export async function clickAgenteListbox(frame:puppeteer.Frame, agent: IAgent):Promise<void> {
+	try {
+        const element: puppeteer.ElementHandle<Element>[] = await frame.$x(`//div[@class='listBoxPanelOptionBasic' and @title='${agent.ParamNome1}']/child::div`);
+
+        if (!element || element.length == 0)
+            throw new Error('Falha ao acessar Agente Listbox');                    
+                            
+        await element[0].click();
+        
+	} catch (err) {
+	    throw err;
+	}	
+}
+
+export async function locatePrefixoImagePerfil(frame:puppeteer.Frame, id:string):Promise<string> {
+    let idImg: string =  "";
+
+	try {
+        let elementId: puppeteer.ElementHandle<Element>[] = await frame.$x(`//input[starts-with(@id,'saw_${id}')]`);
+
+        if (elementId.length > 0){
+            let idxPerfil:number = 3;
+            if (elementId.length === 5) // Se tiver 5 dropdown
+                idxPerfil = 2; //Pegar o terceiro (0-based index)
+
+            idImg = await elementId[idxPerfil].evaluate(el => el.getAttribute("id"));                        
+        }
+        else
+        {
+            await frame.waitForTimeout(1000);
+            const newId:string = await locateId(frame);
+
+            elementId = await frame.$x(`//input[starts-with(@id,'saw_${newId}')]`);
+            if (elementId.length > 0){
+                let idxPerfil:number = 3;
+
+                if (elementId.length === 5) // Se tiver 5 dropdown
+                    idxPerfil = 2; //Pegar o terceiro (0-based index)
+
+                idImg = await elementId[idxPerfil].evaluate(el => el.getAttribute("id"));                        
+            }
+        }        
+        
+        return idImg;
+	} catch (err) {
+	    throw err;
+	}	
+}
+
+export async function selectReferencia(frame:puppeteer.Frame, agent:IAgent, ref: number): Promise<string>{
+	let mensagemRetorno: string = "";
+
+	try {
+		//Localizar ID            
+        let id:string = await locateId(frame);
+
+		if (id !== "")
+		{
+			//Id Imagem AnoMes
+			await frame.waitForTimeout(1000);
+			let idImg:string = await locatePrefixoImageAnoMes(frame, id);                
+
+			//Imagem dropdown ano_mes                
+			await frame.click(`#${idImg}_dropdownIcon`);
+			await frame.waitForTimeout(7000);
+
+			//Selecionar o ano/mes da lista
+			let anomes: string = ref.toString().substring(0, 4) + "/" + ref.toString().substring(4, 6);                
+			let elementExists: boolean = await isElementExists(frame, `//div//span[@class='promptMenuOptionText' and text()='${anomes}']`);                
+			
+			if (elementExists)
+			{
+				const selectAnoMes:puppeteer.ElementHandle<Element>[] = await frame.$x(`//div//span[@class='promptMenuOptionText' and text()='${anomes}']`);            
+				if (!selectAnoMes || selectAnoMes.length == 0)
+					mensagemRetorno = 'Falha ao acessar Combo AnoMes';    
+				else 
+				{
+					await selectAnoMes[0].click();
+
+					//COLOCAR VERIFICADOR SE A PAGINA FOI CARREGADA (DEMORA PRA ABRIR)
+					await frame.waitForTimeout(7000);
+				}                
+			}
+			else
+				mensagemRetorno = `RRV001 ${agent.ParamValor5} - Evento: ${anomes} - ${agent.ParamValor4} não disponível`;
+		}
+		else
+			mensagemRetorno = `RRV001 ${agent.ParamValor5} - falhar ao localizar o Id no Html.`;
+
+		return mensagemRetorno;
+	} catch (err) {
+		throw err;
+	}
+}
+
+export async function selectEvento(frame:puppeteer.Frame, agent:IAgent, ref: number): Promise<string>{
+	let mensagemRetorno: string = "";
+
+	try {
+		//Localizar ID            
+        let id:string = await locateId(frame);
+            
+		//Localizar novo ID para selecionar o evento
+		id = await locateId(frame);
+		if (id !== "")
+		{
+			//Buscar id input do evento que será o prefixo do id da imagem
+			await frame.waitForTimeout(1000);
+			const idImg = await locatePrefixoImageEvento(frame, id);
+
+			//Imagem dropdown evento
+			await frame.click(`#${idImg}_dropdownIcon`);
+			await frame.waitForTimeout(6000);
+
+			//Selecionar Evento
+			const anomes = ref.toString().substring(0, 4) + "_" + ref.toString().substring(4, 6);                
+			const elementExists = await isElementExists(frame, `//span[@class='promptMenuOptionText' and text()='${anomes}_${agent.ParamValor4}']`);
+			if (elementExists)
+			{
+				const selectEvento:puppeteer.ElementHandle<Element>[] = await frame.$x(`//span[@class='promptMenuOptionText' and text()='${anomes}_${agent.ParamValor4}']`);            
+				if (!selectEvento || selectEvento.length == 0)
+					mensagemRetorno = 'Falha ao acessar Combo Evento';     
+				else {
+					await selectEvento[0].click();
+					await frame.waitForTimeout(4000);
+				}               
+			}
+			else
+				mensagemRetorno = `RRV001 ${agent.ParamValor5} - Evento: ${anomes} - ${agent.ParamValor4} não disponível`;
+		}
+		else
+			mensagemRetorno = `RRV001 ${agent.ParamValor5} - falhar ao localizar o Id no Html.`;
+
+		return mensagemRetorno;
+	} catch (err) {
+		throw err;
+	}
+}
+
+export async function clickPerfilCheckbox(frame:puppeteer.Frame, agent: IAgent):Promise<void> {
+	try {
+        let selectPerfil: puppeteer.ElementHandle<Element>[] = await frame.$x(`//div//label[@class='checkboxRadioButtonLabel' and text()='${agent.ParamNome1}']`);
+
+        if (selectPerfil.length > 0)        
+            await selectPerfil[0].click();
+        else
+        {
+            await frame.waitForTimeout(5000);
+            selectPerfil = await frame.$x(`//div//label[@class='checkboxRadioButtonLabel' and text()='${agent.ParamNome1}']`);
+            await selectPerfil[0].click();
+        }
+	} catch (err) {
+	    throw err;
+	}	
+}
+
+export async function selectPerfil(page: puppeteer.Page, frame:puppeteer.Frame, agent:IAgent): Promise<string>{
+	let mensagemRetorno: string = "";
+
+	try {
+		//Localizar ID            
+        let id:string = await locateId(frame);
+            
+		//Localizar novo ID para selecionar o evento
+		id = await locateId(frame);
+		if (id !== "")
+		{
+			let repeater = 0;
+			do {
+				//Localizar novamente o ID para selecionar o Perfil
+				id = await locateId(frame);
+				await frame.waitForTimeout(1000);
+
+				//Id Imagem Perfil
+				let idImg = await locatePrefixoImagePerfil(frame, id);
+
+				//Imagem dropdown Perfil
+				await frame.click(`#${idImg}_dropdownIcon`);
+				await frame.waitForTimeout(6000);
+
+				//Selecionar Perfil
+				const elementExists = await isElementExists(frame, `//div//label[@class='checkboxRadioButtonLabel' and text()='${agent.ParamNome1}']`);                                                    
+				if (elementExists)
+				{
+					let chkPerfil:puppeteer.ElementHandle<Element> = await frame.$(`input[name='${idImg}'][value='${agent.ParamNome1}'][type='checkbox']`);
+					if (chkPerfil === null){
+						await frame.waitForTimeout(1000);
+						id = await locateId(frame);
+						await frame.waitForTimeout(1000);
+						idImg = await locatePrefixoImagePerfil(frame, id);
+						chkPerfil = await frame.$(`input[name='${idImg}'][value='${agent.ParamNome1}'][type='checkbox']`);
+					}                                        
+
+					if (chkPerfil === null){
+						await page.close();
+						mensagemRetorno = "RRV001 - Falha obter referência ao elemento Perfil.";
+						break;
+					}
+					
+					
+
+					const checkedValue:string = await getAttributeFromElement(chkPerfil, "checked");                                        
+
+					if (checkedValue !== null){
+						if (checkedValue.toString().toLowerCase() !== "true")
+						{
+							await frame.waitForTimeout(2000);
+							await clickPerfilCheckbox(frame, agent);
+							await frame.waitForTimeout(2000);
+						}
+					}
+					else
+					{
+						await frame.waitForTimeout(2000);
+						await clickPerfilCheckbox(frame, agent);
+						await frame.waitForTimeout(2000);
+					}
+
+					//Desmcarcar Combo Pertil
+					await frame.click(`#${idImg}_dropdownIcon`);
+					await frame.waitForTimeout(6000);
+					repeater = 0;
+					break;
+				}
+				else
+					repeater++;
+
+			} while(repeater <= 2);
+
+			if (mensagemRetorno !== "")
+			{
+				if (repeater != 0)
+				{
+					await page.close();
+					mensagemRetorno = "RRV001 - Falha ao acessar o Dropdown list Perfil.";
+				}
+			}
+		}
+		else
+            mensagemRetorno = `RRV001 ${agent.ParamValor5} - perfil não pode ser localizado.`; 
+
+		return mensagemRetorno;
 	} catch (err) {
 		throw err;
 	}
