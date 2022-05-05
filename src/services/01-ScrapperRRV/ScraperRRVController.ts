@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { ScraperRRVService } from "./ScraperRRVService";
+import { IServiceResponse, ScraperRRVService } from "./ScraperRRVService";
 
 export class ScraperRRVController {
     constructor(
@@ -12,14 +12,17 @@ export class ScraperRRVController {
             const robotId = Number(request.params.roboid);
             const cnpj = request.params.cnpj;            
 
-            await this.scraperService.execute(robotId, cnpj);
+            const serviceResponse:IServiceResponse = await this.scraperService.execute(robotId, cnpj, 202202);           
 
-            return response.status(200).send();
+            return response.status(200).json(serviceResponse);
         }
         catch (err) {
             return response.status(400).json({
-                message: err.message || "unexpected error"
-            })
+                message: err || "unexpected error",
+                notificationType: 4,
+                notificationMessage: "❌ " + err,
+                hasError:true
+            });
         }
     }
 }

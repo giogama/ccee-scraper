@@ -104,7 +104,9 @@ export async function navigateToDashboard(agent:IAgent,  page: puppeteer.Page): 
 	} catch (err) {
 		throw err;
 	}
-}export async function locateId(frame:puppeteer.Frame):Promise<string> {
+}
+
+export async function locateId(frame:puppeteer.Frame):Promise<string> {
     let id: string =  "";
 
 	try {
@@ -205,7 +207,7 @@ export async function locatePrefixoImagePerfil(frame:puppeteer.Frame, id:string)
 	}	
 }
 
-export async function selectReferencia(frame:puppeteer.Frame, agent:IAgent, ref: number): Promise<string>{
+export async function selectReferencia(frame:puppeteer.Frame, agent:IAgent, prefixo:string, ref: number): Promise<string>{
 	let mensagemRetorno: string = "";
 
 	try {
@@ -229,8 +231,9 @@ export async function selectReferencia(frame:puppeteer.Frame, agent:IAgent, ref:
 			if (elementExists)
 			{
 				const selectAnoMes:puppeteer.ElementHandle<Element>[] = await frame.$x(`//div//span[@class='promptMenuOptionText' and text()='${anomes}']`);            
-				if (!selectAnoMes || selectAnoMes.length == 0)
+				if (!selectAnoMes || selectAnoMes.length == 0) {
 					mensagemRetorno = 'Falha ao acessar Combo AnoMes';    
+				}
 				else 
 				{
 					await selectAnoMes[0].click();
@@ -240,10 +243,10 @@ export async function selectReferencia(frame:puppeteer.Frame, agent:IAgent, ref:
 				}                
 			}
 			else
-				mensagemRetorno = `RRV001 ${agent.ParamValor5} - Evento: ${anomes} - ${agent.ParamValor4} não disponível`;
+				mensagemRetorno = `${prefixo}${agent.ParamValor5} - Evento: ${anomes} - ${agent.ParamValor4} não disponível`;
 		}
 		else
-			mensagemRetorno = `RRV001 ${agent.ParamValor5} - falhar ao localizar o Id no Html.`;
+			mensagemRetorno = `${prefixo}${agent.ParamValor5} - falhar ao localizar o Id no Html.`;
 
 		return mensagemRetorno;
 	} catch (err) {
@@ -251,7 +254,7 @@ export async function selectReferencia(frame:puppeteer.Frame, agent:IAgent, ref:
 	}
 }
 
-export async function selectEvento(frame:puppeteer.Frame, agent:IAgent, ref: number): Promise<string>{
+export async function selectEvento(frame:puppeteer.Frame, agent:IAgent, prefixo:string, ref: number): Promise<string>{
 	let mensagemRetorno: string = "";
 
 	try {
@@ -276,18 +279,19 @@ export async function selectEvento(frame:puppeteer.Frame, agent:IAgent, ref: num
 			if (elementExists)
 			{
 				const selectEvento:puppeteer.ElementHandle<Element>[] = await frame.$x(`//span[@class='promptMenuOptionText' and text()='${anomes}_${agent.ParamValor4}']`);            
-				if (!selectEvento || selectEvento.length == 0)
+				if (!selectEvento || selectEvento.length == 0) {
 					mensagemRetorno = 'Falha ao acessar Combo Evento';     
+				}
 				else {
 					await selectEvento[0].click();
 					await frame.waitForTimeout(4000);
 				}               
 			}
 			else
-				mensagemRetorno = `RRV001 ${agent.ParamValor5} - Evento: ${anomes} - ${agent.ParamValor4} não disponível`;
+				mensagemRetorno = `${prefixo}${agent.ParamValor5} - Evento: ${anomes} - ${agent.ParamValor4} não disponível`;
 		}
 		else
-			mensagemRetorno = `RRV001 ${agent.ParamValor5} - falhar ao localizar o Id no Html.`;
+			mensagemRetorno = `${prefixo}${agent.ParamValor5} - falhar ao localizar o Id no Html.`;
 
 		return mensagemRetorno;
 	} catch (err) {
@@ -312,7 +316,7 @@ export async function clickPerfilCheckbox(frame:puppeteer.Frame, agent: IAgent):
 	}	
 }
 
-export async function selectPerfil(page: puppeteer.Page, frame:puppeteer.Frame, agent:IAgent): Promise<string>{
+export async function selectPerfil(page: puppeteer.Page, frame:puppeteer.Frame, agent:IAgent, prefixo:string): Promise<string>{
 	let mensagemRetorno: string = "";
 
 	try {
@@ -351,7 +355,7 @@ export async function selectPerfil(page: puppeteer.Page, frame:puppeteer.Frame, 
 
 					if (chkPerfil === null){
 						await page.close();
-						mensagemRetorno = "RRV001 - Falha obter referência ao elemento Perfil.";
+						mensagemRetorno = `${prefixo}Falha obter referência ao elemento Perfil.`;
 						break;
 					}
 					
@@ -390,12 +394,12 @@ export async function selectPerfil(page: puppeteer.Page, frame:puppeteer.Frame, 
 				if (repeater != 0)
 				{
 					await page.close();
-					mensagemRetorno = "RRV001 - Falha ao acessar o Dropdown list Perfil.";
+					mensagemRetorno = `${prefixo}Falha ao acessar o Dropdown list Perfil.`;
 				}
 			}
 		}
 		else
-            mensagemRetorno = `RRV001 ${agent.ParamValor5} - perfil não pode ser localizado.`; 
+            mensagemRetorno = `${prefixo}${agent.ParamValor5} - perfil não pode ser localizado.`; 
 
 		return mensagemRetorno;
 	} catch (err) {
@@ -416,9 +420,16 @@ export interface IDownload {
     Description: string;
     Filename: string;
 	Extension: string;
+	MimeType: string;
 }
 
-export async function getQuadroData(page: puppeteer.Page, frame:puppeteer.Frame, agent:IAgent, xPathLinkExportar:string, quadroNumero:string):Promise<IDownload | null> {
+export interface IScrapingResponse {
+    HasError: boolean;
+    Message: string;    
+	Documents: IDownload[]
+}
+
+export async function getQuadroData(page: puppeteer.Page, frame:puppeteer.Frame, agent:IAgent, xPathLinkExportar:string, descricao:string, quadroNumero:string):Promise<IDownload | null> {
 	try {
         const linkExportar: puppeteer.ElementHandle<Element>[] = await frame.$x(xPathLinkExportar);
 
@@ -427,13 +438,13 @@ export async function getQuadroData(page: puppeteer.Page, frame:puppeteer.Frame,
         if (quadros.length > 0) {
             let indiceExportar:number = 0;
             let quadroExiste: boolean = false;
-			let descriptionQuadro: string = "";
+			//let descriptionQuadro: string = "";
 
 			for (let element of quadros) {
 				const innerText:string = await getAttributeFromElement(element, "innerText");			
                 
                 if (innerText.toString().toLowerCase().indexOf("quadro " + quadroNumero) >=0){				
-					descriptionQuadro = innerText;					
+					//descriptionQuadro = innerText;					
 
                     if (indiceExportar < linkExportar.length) {	
 						await frame.waitForTimeout(1000);
@@ -461,10 +472,12 @@ export async function getQuadroData(page: puppeteer.Page, frame:puppeteer.Frame,
 					const jCookies:puppeteer.Protocol.Network.GetAllCookiesResponse = await page.client().send("Network.getAllCookies");
 
 					if (url !== ""){									
-						const downloadQuadro: IDownload  = await downloadFile(descriptionQuadro,url, jCookies);
+						const downloadQuadro: IDownload  = await downloadFile(descricao,url, jCookies);
 						if (downloadQuadro) {
 							console.log("Filename: ", downloadQuadro.Filename);
 						}
+
+						return downloadQuadro;
 					}
 				}				
             }

@@ -1,9 +1,8 @@
 import { IAgent, IEmailSettings } from '../../configs/IScraperConfig';
-import { loginCCEE, startBrowser, processToken, navigateToDashboard, locateId, 
-         locatePrefixoImageAnoMes, locatePrefixoImageEvento, 
-         clickAgenteListbox, locatePrefixoImagePerfil, clickPerfilCheckbox, getNumberQuadros, getQuadroData, selectReferencia, selectEvento, selectPerfil } from '../CCEEUtils';
-import { getAttributeFromElement, 
-         isElementExists, IElementExists, isElementsExists } from '../HTMLUtils';
+import { loginCCEE, startBrowser, processToken, navigateToDashboard, 
+         clickAgenteListbox, getNumberQuadros, getQuadroData, 
+         selectReferencia, selectEvento, selectPerfil, IScrapingResponse, IDownload} from '../CCEEUtils';
+import { IElementExists, isElementsExists } from '../HTMLUtils';
 import { IScraperWeb } from "../IScraperWeb";
 import { IMailProvider } from '../../providers/IMailProvider';
 import * as puppeteer from 'puppeteer';
@@ -16,9 +15,15 @@ export class RRV01Scraper implements IScraperWeb {
         private mailProvider: IMailProvider
     ){}
 
-    async start(agent: IAgent, mailSettings: IEmailSettings, ref: number): Promise<void>{
+    async start(agent: IAgent, mailSettings: IEmailSettings, ref: number): Promise<IScrapingResponse>{
         let browserOpen:boolean = false;
         let browser: puppeteer.Browser;
+        let response: IScrapingResponse = {
+            HasError: false,
+            Message: "",    
+	        Documents: null
+        };
+        
 
         try {
             browser = await startBrowser();
@@ -73,21 +78,21 @@ export class RRV01Scraper implements IScraperWeb {
             let mensagemRetorno: string = "";
             
             //---------------------------------
-            mensagemRetorno = await selectReferencia(frame, agent, ref);
-            if (mensagemRetorno !== "")
+            mensagemRetorno = await selectReferencia(frame, agent, "RRV001 ", ref);
+            if (mensagemRetorno === "")
             {
-                mensagemRetorno = await selectEvento(frame, agent, ref);
-                if (mensagemRetorno !== "")
+                mensagemRetorno = await selectEvento(frame, agent, "RRV001 ", ref);
+
+                if (mensagemRetorno === "")
                 {
                     // Selecionar Agente
                     await clickAgenteListbox(frame, agent);
                     await frame.waitForTimeout(1000);
 
-                    mensagemRetorno = await selectPerfil(page, frame, agent);
-                    if (mensagemRetorno !== "")
+                    mensagemRetorno = await selectPerfil(page, frame, agent, "RRV001 - ");
+                    if (mensagemRetorno === "")
                     {
                         //Botão Aplicar
-                        console.log("botão aplicar");
                         await frame.click("#gobtn");
                         await frame.waitForTimeout(30000);
 
@@ -99,8 +104,18 @@ export class RRV01Scraper implements IScraperWeb {
 
                             for (let i=1; i<=quadros; i++){
                                 console.log("iniciar download quador ", i);                                  
-                                await getQuadroData(page, frame, agent, elementsExists.XPath, i.toString());
+                                const document: IDownload = await getQuadroData(page, frame, agent, elementsExists.XPath, `RRV001 ${agent.ParamValor5} - Quadro ${i}`, i.toString());
                                 await frame.waitForTimeout(1000);
+                                if (document != null) {
+
+                                    if (i===1)
+                                    {
+                                        response.Documents = [];    
+                                    }
+
+                                    response.Documents.push(document); 
+                                }
+                                    
                             }                                    
                             console.log("concluído download dos quadros");
                         }
@@ -110,18 +125,29 @@ export class RRV01Scraper implements IScraperWeb {
                 }
             }
             //---------------------------------
+            if (mensagemRetorno !== ""){
+                response.HasError = false;
+                response.Message = mensagemRetorno;
+                response.Documents = null;
+            }
+            else
+            {
+                response.HasError = false;
+                response.Message = "";
+            }
             
-            console.log(mensagemRetorno);
-            await frame.waitForTimeout(40000); // wait for 40 seconds
+            await frame.waitForTimeout(10000); // wait for 40 seconds
             await browser.close();
-            console.log("Finalizado");
         }
-        catch(err) {            
+        catch(err) {   
+            response.HasError = true;
+            response.Message = err;
+            response.Documents = null;
+
              if (browserOpen)
                  browser.close();
-
-            console.log("Finalizado com erro: ", err);
-            throw err;
         }
+
+        return response;
     }
 }
